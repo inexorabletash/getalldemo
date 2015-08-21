@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<title>IndexedDB: get() vs. getAll()</title>
+<h1>IndexedDB: get() vs. getAll()</h1>
+<output id="status"></output>
+
+<table id="test" style="visibility: hidden">
+<tr>
+  <th>get()
+  <th>getAll()
+<tr>
+  <td><canvas id="get" width=200 height=200>
+  <td><canvas id="getAll" width=200 height=200>
+<tr>
+  <th><button id="doGet">go</button>
+  <th><button id="doGetAll">go</button>
+<tr>
+  <th><output id="resultGet"></output>
+  <th><output id="resultGetAll"></output>
+</table>
+
+<script>
+var $ = document.querySelector.bind(document);
+function Progress(selector) {
+  this.canvas = $(selector);
+  this.ctx = this.canvas.getContext('2d');
+  this.canvas.style.backgroundColor = 'red';
+}
+Progress.prototype = {
+  note: function(n, d) {
+    var cw = Number(this.canvas.width), ch = Number(this.canvas.height);
+    var x = 0;
+    var y = (ch * n / d) | 0;
+    var w = cw;
+    var h = (ch / d + 1) | 0;
+    this.ctx.fillStyle = 'darkgreen';
+    this.ctx.fillRect(x, y, w, h);
+  },
+  clear: function() {
+    var cw = Number(this.canvas.width), ch = Number(this.canvas.height);
+    this.ctx.clearRect(0, 0, cw, ch);
+  }
+};
+
+var NUM_RECORDS = 10000;
+var BATCH_SIZE = 1000;
+
+var get = new Progress('#get');
+var getAll = new Progress('#getAll');
+
+function status(message) {
+  $('#status').innerHTML = '';
+  $('#status').appendChild(document.createTextNode(message));
+}
+
+status("Preparing " + NUM_RECORDS + " records...");
+var open = indexedDB.open('db-getallperf-' + NUM_RECORDS);
+open.onupgradeneeded = function() {
+  var db = open.result;
+  var store = db.createObjectStore('store');
+  for (var i = 0; i < NUM_RECORDS; ++i) {
+    store.put(i, i);
+  }
+};
+open.onsuccess = function() {
+  var db = open.result;
+  var tx = db.transaction('store');
+
+  status("Ready with " + NUM_RECORDS + " records.");
+  $('#test').style.visibility = 'visible';
+
+  $('#doGet').onclick = function() {
+    status("Making " + NUM_RECORDS + " requests...");
+    get.clear();
+    setTimeout(function() {
+      var tx = db.transaction('store');
+      var start = Date.now();
+      var store = tx.objectStore('store');
+      for (var i = 0; i < NUM_RECORDS; ++i) {
+        store.get(i).onsuccess = function(e) {
+          var record = e.target.result;
+          get.note(record, NUM_RECORDS);
+        };
+      }
+      tx.oncomplete = function() {
+        $('#resultGet').innerHTML = String(Date.now() - start) + 'ms';
+        status("Done.");
+      };
+    }, 0);
+  };
+
+  $('#doGetAll').onclick = function() {
+    status("Making " + Math.ceil(NUM_RECORDS / BATCH_SIZE) + " requests...");
+    getAll.clear();
+    setTimeout(function() {
+      var tx = db.transaction('store');
+      var start = Date.now();
+      var store = tx.objectStore('store');
+      for (var i = 0; i < NUM_RECORDS; i += BATCH_SIZE) {
+        store.getAll(IDBKeyRange.lowerBound(i), BATCH_SIZE).onsuccess = function(e) {
+          var records = e.target.result;
+          for (var i = 0; i < records.length; ++i) {
+            getAll.note(records[i], NUM_RECORDS);
+          }
+        };
+      }
+      tx.oncomplete = function() {
+        $('#resultGetAll').innerHTML = String(Date.now() - start) + 'ms';
+        status("Done.");
+      };
+    }, 0);
+  };
+};
+
+</script>
