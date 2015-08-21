@@ -6,16 +6,20 @@
 <table id="test" style="visibility: hidden">
 <tr>
   <th>get()
+  <th>get() batched
   <th>getAll()
 <tr>
   <td><canvas id="get" width=200 height=200>
+  <td><canvas id="getBatched" width=200 height=200>
   <td><canvas id="getAll" width=200 height=200>
 <tr>
   <th><button id="doGet">go</button>
+  <th><button id="doGetBatched">go</button>
   <th><button id="doGetAll">go</button>
 <tr>
-  <th><output id="resultGet"></output>
-  <th><output id="resultGetAll"></output>
+  <th><output id="resultGet">&nbsp;</output>
+  <th><output id="resultGetBatched">&nbsp;</output>
+  <th><output id="resultGetAll">&nbsp;</output>
 </table>
 
 <script>
@@ -45,6 +49,7 @@ var NUM_RECORDS = 100000;
 var BATCH_SIZE = 10000;
 
 var get = new Progress('#get');
+var getBatched = new Progress('#getBatched');
 var getAll = new Progress('#getAll');
 
 function status(message) {
@@ -70,6 +75,7 @@ open.onsuccess = function() {
 
   $('#doGet').onclick = function() {
     status("Making " + NUM_RECORDS + " requests...");
+    $('#resultGet').innerHTML = '';
     get.clear();
     setTimeout(function() {
       var tx = db.transaction('store');
@@ -88,9 +94,39 @@ open.onsuccess = function() {
     }, 0);
   };
 
+  $('#doGetBatched').onclick = function() {
+    status("Making " + NUM_RECORDS + " requests...");
+    $('#resultGetBatched').innerHTML = '';
+    getBatched.clear();
+    setTimeout(function() {
+      var tx = db.transaction('store');
+      var start = Date.now();
+      var store = tx.objectStore('store');
+      var base = 0;
+      (function spin() {
+        for (var i = 0; i < BATCH_SIZE; ++i) {
+          store.get(base + i).onsuccess = function(e) {
+            var record = e.target.result;
+            getBatched.note(record, NUM_RECORDS);
+            if (record === base + BATCH_SIZE - 1) {
+              base += BATCH_SIZE;
+              if (base < NUM_RECORDS)
+                spin();
+            }
+          };
+        }
+      }());
+      tx.oncomplete = function() {
+        $('#resultGetBatched').innerHTML = String(Date.now() - start) + 'ms';
+        status("Done.");
+      };
+    }, 0);
+  };
+
   $('#doGetAll').onclick = function() {
     status("Making " + Math.ceil(NUM_RECORDS / BATCH_SIZE) + " requests...");
     getAll.clear();
+    $('#resultGetAll').innerHTML = '';
     setTimeout(function() {
       var tx = db.transaction('store');
       var start = Date.now();
@@ -112,4 +148,4 @@ open.onsuccess = function() {
 };
 
 </script>
-<iframe src="//giphy.com/embed/X530jPOZXRMwo" width="480" height="360" frameBorder="0" class="giphy-embed" allowFullScreen></iframe><p><a href="http://giphy.com/gifs/friday-X530jPOZXRMwo">via GIPHY</a></p>
+<img width=600 src="https://media.giphy.com/media/X530jPOZXRMwo/giphy.gif">
