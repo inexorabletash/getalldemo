@@ -91,7 +91,7 @@ open.onsuccess = function() {
         $('#resultGet').innerHTML = String(Date.now() - start) + 'ms';
         status("Done.");
       };
-    }, 0);
+    }, 100);
   };
 
   $('#doGetBatched').onclick = function() {
@@ -120,7 +120,7 @@ open.onsuccess = function() {
         $('#resultGetBatched').innerHTML = String(Date.now() - start) + 'ms';
         status("Done.");
       };
-    }, 0);
+    }, 100);
   };
 
   $('#doGetAll').onclick = function() {
@@ -143,9 +143,9 @@ open.onsuccess = function() {
         $('#resultGetAll').innerHTML = String(Date.now() - start) + 'ms';
         status("Done.");
       };
-    }, 0);
+    }, 100);
   };
 };
 
 </script>
-<img width=600 src="https://media.giphy.com/media/X530jPOZXRMwo/giphy.gif">
+<img style="width: 610px; height: 300px; padding: 2px" src="https://media.giphy.com/media/X530jPOZXRMwo/giphy.gif">
